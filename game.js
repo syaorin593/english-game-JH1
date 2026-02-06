@@ -1,7 +1,7 @@
 // --- 設定 & データ定義 ---
-const SAVE_KEY = 'english_quest_jhs1_v1'; // キーはそのまま
+const SAVE_KEY = 'english_quest_jhs1_v2_fixed'; // キーを更新
 
-// --- 称号データ (中1ver) ---
+// --- 称号データ ---
 const ACHIEVEMENTS = [
     {id:'c1', name:'Hello World', desc:'Stage 1 (be動詞) クリア', icon:'🥚'},
     {id:'c2', name:'アクション開始', desc:'Stage 2 (一般動詞) クリア', icon:'🏃'},
@@ -63,9 +63,9 @@ function shuffleArray(array) {
 // --- 問題データ生成 ---
 function getStageData(stageId) {
     let q = [];
-    // add(type, questionText, answer, options, explanation)
     const add = (type, qText, ans, opts, expl) => {
-        q.push({ id: `${stageId}_${q.length}_${Date.now()}_${Math.random()}`, stage: stageId, type, q: qText, a: ans, o: opts, expl });
+        // IDを一意にする
+        q.push({ id: `${stageId}_${q.length}_${Math.random().toString(36).substring(7)}`, stage: stageId, type, q: qText, a: ans, o: opts, expl });
     };
 
     // --- Stage 1: be動詞 (am, are, is) ---
@@ -281,7 +281,7 @@ function getStageData(stageId) {
     return q;
 }
 
-// --- ゲーム変数 (HPを5に変更) ---
+// --- ゲーム変数 ---
 let gameState = {
     mode: '', 
     stageId: 1,
@@ -290,8 +290,8 @@ let gameState = {
     score: 0,
     combo: 0,
     mistakes: [],
-    hp: 5, // ここを5に変更
-    maxHp: 5, // ここを5に変更
+    hp: 5, // HP 5
+    maxHp: 5,
     expGained: 0,
     goldGained: 0,
     endlessWave: 0,
@@ -357,8 +357,6 @@ function updateTitleStats() {
     document.getElementById('title-next-exp').innerText = nextExp - saveData.exp;
     const pct = Math.min(100, (saveData.exp / nextExp) * 100);
     document.getElementById('title-exp-bar').style.width = `${pct}%`;
-    
-    // エンドレス最大記録の表示
     const recEl = document.getElementById('endless-record-display');
     if(recEl) recEl.innerText = `Endless Best: ${saveData.maxEndlessScore} 問`;
 }
@@ -379,12 +377,12 @@ function updateStageList() {
             btn.disabled = true;
             btn.innerText = "🔒 Locked";
         } else {
-            btn.onclick = () => startStage(i);
+            // ★重要：ここをシンプルに
+            btn.onclick = function() { startStage(i); };
         }
         list.appendChild(btn);
     }
     
-    // エンドレスモード解放処理
     const endBtn = document.getElementById('btn-endless');
     const recEl = document.getElementById('endless-record-display');
     
@@ -410,13 +408,8 @@ function showShop() {
     showScreen('screen-shop');
     updateShopUI();
 }
-
 function updateShopUI() {
-    const setTxt = (id, val) => {
-        const el = document.getElementById(id);
-        if(el) el.innerText = val;
-    };
-    
+    const setTxt = (id, val) => { const el = document.getElementById(id); if(el) el.innerText = val; };
     setTxt('shop-gold', `${saveData.gold} G`);
     setTxt('inv-potion', saveData.items.potion);
     setTxt('inv-bomb', saveData.items.bomb);
@@ -425,7 +418,6 @@ function updateShopUI() {
     setTxt('inv-shield', saveData.items.shield);
     setTxt('inv-coin', saveData.items.coin);
 }
-
 function buyItem(item, price) {
     if(saveData.gold >= price) {
         saveData.gold -= price;
@@ -439,11 +431,7 @@ function buyItem(item, price) {
 
 // --- アイテム使用 ---
 function updateItemButtons() {
-    const setTxt = (id, val) => {
-        const el = document.getElementById(id);
-        if(el) el.innerText = val;
-    };
-    
+    const setTxt = (id, val) => { const el = document.getElementById(id); if(el) el.innerText = val; };
     setTxt('game-inv-potion', saveData.items.potion || 0);
     setTxt('game-inv-bomb', saveData.items.bomb || 0);
     setTxt('game-inv-hint', saveData.items.hint || 0);
@@ -456,160 +444,101 @@ function updateItemButtons() {
 
     const btnPotion = document.getElementById('btn-use-potion');
     if(btnPotion) btnPotion.disabled = !(saveData.items.potion > 0 && gameState.hp < gameState.maxHp);
-
     const btnBomb = document.getElementById('btn-use-bomb');
     if(btnBomb) btnBomb.disabled = !(saveData.items.bomb > 0 && currentQ.type === 'choice');
-    
     const btnHint = document.getElementById('btn-use-hint');
     if(btnHint) btnHint.disabled = !(saveData.items.hint > 0 && (currentQ.type === 'fill' || currentQ.type === 'full' || currentQ.type === 'sort'));
-    
     const btnPencil = document.getElementById('btn-use-pencil');
     if(btnPencil) btnPencil.disabled = !(saveData.items.pencil > 0 && !gameState.pencilUsed && (currentQ.type === 'fill' || currentQ.type === 'full'));
-    
     const btnShield = document.getElementById('btn-use-shield');
     if(btnShield) btnShield.disabled = !(saveData.items.shield > 0 && !gameState.shieldActive);
-    
     const btnCoin = document.getElementById('btn-use-coin');
     if(btnCoin) btnCoin.disabled = !(saveData.items.coin > 0 && !gameState.coinActive);
 }
-
 function usePotion() {
     if(saveData.items.potion > 0 && gameState.hp < gameState.maxHp) {
-        saveData.items.potion--;
-        gameState.hp++;
-        updateHpBar();
-        updateItemButtons();
-        unlockAchievement('item_user');
-        saveGame();
+        saveData.items.potion--; gameState.hp++;
+        updateHpBar(); updateItemButtons(); unlockAchievement('item_user'); saveGame();
     }
 }
-
 function useBomb() {
     if(saveData.items.bomb > 0) {
         const q = gameState.queue[gameState.qIndex];
         if(q.type === 'choice') {
-            saveData.items.bomb--;
-            saveGame();
+            saveData.items.bomb--; saveGame();
             const container = document.getElementById('choices-container');
             const buttons = Array.from(container.children);
             let removed = 0;
             for(let btn of buttons) {
-                if(btn.innerText !== q.a) {
-                    btn.style.visibility = 'hidden';
-                    removed++;
-                    if(removed >= 2) break;
-                }
+                if(btn.innerText !== q.a) { btn.style.visibility = 'hidden'; removed++; if(removed >= 2) break; }
             }
             updateItemButtons();
         }
     }
 }
-
 function useHint() {
     if(saveData.items.hint > 0) {
-        saveData.items.hint--;
-        saveGame();
-        unlockAchievement('item_user');
-        
+        saveData.items.hint--; saveGame(); unlockAchievement('item_user');
         const q = gameState.queue[gameState.qIndex];
-        
         if(q.type === 'sort') {
             alert(`最初の単語は "${q.a.split(' ')[0]}" です`);
         } else if(q.type === 'fill' || q.type === 'full') {
             const words = q.a.split(' ');
-            const firstWord = words[0];
             const inp = document.getElementById('writing-input');
-            inp.value = firstWord + " ";
-            inp.focus();
-            
+            inp.value = words[0] + " "; inp.focus();
             let hintPattern = words.map(w => w[0] + "_".repeat(Math.max(0, w.length-1))).join(' ');
-            hintPattern = hintPattern.replace(/_/g, '_');
-            document.getElementById('writing-hint').innerText = "Hint: " + hintPattern;
+            document.getElementById('writing-hint').innerText = "Hint: " + hintPattern.replace(/_/g, '_');
         }
         updateItemButtons();
     }
 }
-
 function usePencil() {
     if(saveData.items.pencil > 0 && !gameState.pencilUsed) {
         const q = gameState.queue[gameState.qIndex];
         if(q.type === 'fill' || q.type === 'full') {
-            saveData.items.pencil--;
-            gameState.pencilUsed = true;
-            saveGame();
-            
+            saveData.items.pencil--; gameState.pencilUsed = true; saveGame();
             let dummies = ["I don't know.", "She is happy.", "He plays tennis."];
-            if(gameState.queue.length > 3) {
-                dummies = gameState.queue.filter(bq => bq !== q).slice(0,3).map(bq => bq.a);
-            }
-            
+            if(gameState.queue.length > 3) { dummies = gameState.queue.filter(bq => bq !== q).slice(0,3).map(bq => bq.a); }
             document.getElementById('writing-container').classList.add('hidden');
             const c = document.getElementById('choices-container');
-            c.classList.remove('hidden');
-            c.innerHTML = '';
-            
+            c.classList.remove('hidden'); c.innerHTML = '';
             let opts = [q.a, ...dummies].sort(() => Math.random() - 0.5);
             opts.forEach(opt => {
-                const btn = document.createElement('button');
-                btn.className = 'choice-btn';
-                btn.innerText = opt;
-                btn.onclick = () => checkAnswer(opt === q.a, q);
-                c.appendChild(btn);
+                const btn = document.createElement('button'); btn.className = 'choice-btn';
+                btn.innerText = opt; btn.onclick = () => checkAnswer(opt === q.a, q); c.appendChild(btn);
             });
             updateItemButtons();
         }
     }
 }
-
 function useShield() {
     if(saveData.items.shield > 0 && !gameState.shieldActive) {
-        saveData.items.shield--;
-        gameState.shieldActive = true;
-        document.getElementById('shield-overlay').classList.remove('hidden');
-        saveGame();
-        updateItemButtons();
+        saveData.items.shield--; gameState.shieldActive = true;
+        document.getElementById('shield-overlay').classList.remove('hidden'); saveGame(); updateItemButtons();
     }
 }
-
 function useCoin() {
     if(saveData.items.coin > 0 && !gameState.coinActive) {
-        saveData.items.coin--;
-        gameState.coinActive = true;
-        document.getElementById('coin-overlay').classList.remove('hidden');
-        saveGame();
-        updateItemButtons();
+        saveData.items.coin--; gameState.coinActive = true;
+        document.getElementById('coin-overlay').classList.remove('hidden'); saveGame(); updateItemButtons();
     }
 }
 
 function initGame(mode) {
-    gameState.mode = mode;
-    gameState.queue = []; 
-    gameState.score = 0;
-    gameState.combo = 0;
-    gameState.qIndex = 0;
-    gameState.mistakes = [];
-    gameState.hp = 5; // 初期HPを5に設定
-    gameState.maxHp = 5; // 最大HPを5に設定
-    gameState.expGained = 0;
-    gameState.goldGained = 0;
-    gameState.endlessWave = 1;
-    gameState.endlessCorrectCount = 0; 
-    gameState.writeCorrectCount = 0;
-    gameState.shieldActive = false;
-    gameState.pencilUsed = false;
-    gameState.coinActive = false;
+    gameState.mode = mode; gameState.queue = []; 
+    gameState.score = 0; gameState.combo = 0; gameState.qIndex = 0; gameState.mistakes = [];
+    gameState.hp = 5; gameState.maxHp = 5; // HP 5
+    gameState.expGained = 0; gameState.goldGained = 0;
+    gameState.endlessWave = 1; gameState.endlessCorrectCount = 0; gameState.writeCorrectCount = 0;
+    gameState.shieldActive = false; gameState.pencilUsed = false; gameState.coinActive = false;
     updateHpBar();
     showScreen('screen-game');
     updateItemButtons();
     
-    // 赤色バグ修正
     const qArea = document.getElementById('question-area');
     if(qArea) {
-        qArea.classList.remove('anim-wrong');    
-        qArea.classList.remove('anim-correct'); 
-        qArea.style.borderColor = "#dfe6e9";     
+        qArea.classList.remove('anim-wrong'); qArea.classList.remove('anim-correct'); qArea.style.borderColor = "#dfe6e9";     
     }
-
     const gameScreen = document.getElementById('screen-game');
     gameScreen.classList.remove('boss-mode');
     document.getElementById('boss-overlay').classList.add('hidden');
@@ -617,38 +546,72 @@ function initGame(mode) {
     document.getElementById('coin-overlay').classList.add('hidden');
 }
 
+// ★修正：startStage関数（エラーハンドリング強化・変数重複回避）
 function startStage(id) {
-    initGame('stage');
-    gameState.stageId = id;
-    
-    let pool = [];
-    if(id === 12) {
-        pool = getStageData(12);
-        gameState.queue = pool.sort(() => Math.random() - 0.5).slice(0, 15);
-    } else {
-        let pool = (id === 11) ? [] : getStageData(id);
-        if(id === 11) for(let i=1; i<=10; i++) pool = pool.concat(getStageData(i));
+    try {
+        initGame('stage');
+        gameState.stageId = id;
+        
+        // データを取得する変数を明確に分ける
+        let currentStageData = [];
 
-        const choices = pool.filter(q => q.type === 'choice');
-        const sorts = pool.filter(q => q.type === 'sort');
-        const writes = pool.filter(q => q.type === 'fill' || q.type === 'full');
-        const pick = (arr, n) => arr.sort(() => Math.random() - 0.5).slice(0, n);
-        
-        let set = [];
-        set = set.concat(pick(choices, 4));
-        set = set.concat(pick(sorts, 3));
-        set = set.concat(pick(writes, 3));
-        
-        while(set.length < 10 && pool.length >= 10) {
-            let c = pool[Math.floor(Math.random()*pool.length)];
-            if(!set.some(s=>s.id===c.id)) set.push(c);
+        if(id === 12) {
+            let exData = getStageData(12);
+            // EXステージは15問
+            gameState.queue = exData.sort(() => Math.random() - 0.5).slice(0, 15);
+        } else {
+            // 通常ステージ
+            let sourceData = [];
+            if(id === 11) {
+                // 総復習は全ステージから
+                for(let i=1; i<=10; i++) {
+                    sourceData = sourceData.concat(getStageData(i));
+                }
+            } else {
+                // 通常は特定IDから
+                sourceData = getStageData(id);
+            }
+
+            // 安全策：データがない場合はエラー
+            if(!sourceData || sourceData.length === 0) {
+                throw new Error("No data found for stage " + id);
+            }
+
+            const choices = sourceData.filter(q => q.type === 'choice');
+            const sorts = sourceData.filter(q => q.type === 'sort');
+            const writes = sourceData.filter(q => q.type === 'fill' || q.type === 'full');
+            
+            const pick = (arr, n) => arr.sort(() => Math.random() - 0.5).slice(0, n);
+            
+            let set = [];
+            set = set.concat(pick(choices, 4));
+            set = set.concat(pick(sorts, 3));
+            set = set.concat(pick(writes, 3));
+            
+            // 10問に満たない場合の補充
+            let loopCount = 0;
+            while(set.length < 10 && sourceData.length >= 10 && loopCount < 100) {
+                let c = sourceData[Math.floor(Math.random()*sourceData.length)];
+                if(!set.some(s=>s.id===c.id)) set.push(c);
+                loopCount++;
+            }
+            gameState.queue = set.sort(() => Math.random() - 0.5);
         }
-        gameState.queue = set.sort(() => Math.random() - 0.5);
+        
+        if(gameState.queue.length === 0) { 
+            alert("エラー: 問題データの読み込みに失敗しました。");
+            showScreen('screen-stages');
+            return;
+        }
+
+        document.getElementById('q-category').innerText = `Stage ${id}`;
+        showQuestion();
+
+    } catch(e) {
+        console.error(e);
+        alert("エラーが発生しました: " + e.message);
+        showScreen('screen-stages');
     }
-    
-    if(gameState.queue.length === 0) { alert("Data Error"); return; }
-    document.getElementById('q-category').innerText = `Stage ${id}`;
-    showQuestion();
 }
 
 function startEndless() {
@@ -659,10 +622,7 @@ function startEndless() {
 
 function addEndlessQuestions() {
     let pool = [];
-    // Stage 12 (EX) を除く 1〜11 から出題
-    for(let i=1; i<=11; i++) {
-        pool = pool.concat(getStageData(i));
-    }
+    for(let i=1; i<=11; i++) { pool = pool.concat(getStageData(i)); }
     pool = shuffleArray(pool);
     gameState.queue = gameState.queue.concat(pool.slice(0, 10));
 }
@@ -670,12 +630,10 @@ function addEndlessQuestions() {
 // --- 問題表示 ---
 function showQuestion() {
     if (gameState.mode === 'endless' && gameState.qIndex >= gameState.queue.length) {
-        showEndlessModal();
-        return;
+        showEndlessModal(); return;
     }
     if (gameState.qIndex >= gameState.queue.length) {
-        finishGame(true);
-        return;
+        finishGame(true); return;
     }
 
     const isBoss = (gameState.mode === 'stage' && gameState.qIndex === gameState.queue.length - 1);
@@ -705,24 +663,18 @@ function showQuestion() {
     const pct = ((gameState.qIndex) / total) * 100;
     document.getElementById('progress-fill').style.width = `${pct}%`;
 
-    ['choices-container', 'sort-container', 'writing-container'].forEach(id => 
-        document.getElementById(id).classList.add('hidden')
-    );
+    ['choices-container', 'sort-container', 'writing-container'].forEach(id => document.getElementById(id).classList.add('hidden'));
     document.getElementById('writing-status').classList.add('hidden');
     document.getElementById('writing-hint').innerText = ""; 
     updateItemButtons();
 
     if(q.type === 'choice') {
         const c = document.getElementById('choices-container');
-        c.classList.remove('hidden');
-        c.innerHTML = '';
+        c.classList.remove('hidden'); c.innerHTML = '';
         let opts = shuffleArray([...q.o]);
         opts.forEach(opt => {
-            const btn = document.createElement('button');
-            btn.className = 'choice-btn';
-            btn.innerText = opt;
-            btn.onclick = () => checkAnswer(opt === q.a, q);
-            c.appendChild(btn);
+            const btn = document.createElement('button'); btn.className = 'choice-btn';
+            btn.innerText = opt; btn.onclick = () => checkAnswer(opt === q.a, q); c.appendChild(btn);
         });
     } else if(q.type === 'sort') {
         const c = document.getElementById('sort-container');
@@ -738,34 +690,23 @@ function showQuestion() {
         ws.innerText = `単語数: ${wordCount}`;
         ws.classList.remove('hidden');
         const inp = document.getElementById('writing-input');
-        inp.value = '';
-        inp.focus();
+        inp.value = ''; inp.focus();
         inp.onkeydown = (e) => { if(e.key==='Enter') checkWritingAnswer(); };
     }
 }
 
-function getTypeLabel(t) {
-    if(t==='choice') return '4択';
-    if(t==='sort') return '並び替え';
-    return '記述';
-}
+function getTypeLabel(t) { if(t==='choice') return '4択'; if(t==='sort') return '並び替え'; return '記述'; }
 
 function normalizeText(text) {
     let t = text.toLowerCase().trim();
-    t = t.replace(/[.?!,]/g, ''); 
-    t = t.replace(/\s+/g, ' ');    
+    t = t.replace(/[.?!,]/g, ''); t = t.replace(/\s+/g, ' ');    
     const maps = {
-        "don't": "do not", "doesn't": "does not", "didn't": "did not",
-        "can't": "cannot", "won't": "will not", "isn't": "is not", "aren't": "are not",
-        "wasn't": "was not", "weren't": "were not", "shouldn't": "should not", "mustn't": "must not",
-        "i'm": "i am", "you're": "you are", "he's": "he is", "she's": "she is",
-        "we're": "we are", "they're": "they are", "it's": "it is", "that's": "that is",
-        "let's": "let us"
+        "don't": "do not", "doesn't": "does not", "didn't": "did not", "can't": "cannot", "won't": "will not",
+        "isn't": "is not", "aren't": "are not", "wasn't": "was not", "weren't": "were not",
+        "i'm": "i am", "you're": "you are", "he's": "he is", "she's": "she is", "we're": "we are",
+        "they're": "they are", "it's": "it is", "that's": "that is", "let's": "let us"
     };
-    for (let key in maps) {
-        const regex = new RegExp(`\\b${key.replace("'", "")}\\b`, 'g'); 
-        t = t.replace(key, maps[key]);
-    }
+    for (let key in maps) { const regex = new RegExp(`\\b${key.replace("'", "")}\\b`, 'g'); t = t.replace(key, maps[key]); }
     return t;
 }
 
@@ -774,104 +715,55 @@ function checkAnswer(isCorrect, q) {
     const isBoss = (gameState.mode === 'stage' && gameState.qIndex === gameState.queue.length - 1);
 
     if(isCorrect) {
-        gameState.score += 10 + gameState.combo;
-        gameState.combo++;
-        gameState.expGained += 20;
-        
+        gameState.score += 10 + gameState.combo; gameState.combo++; gameState.expGained += 20;
         if(gameState.mode === 'endless') {
             gameState.endlessCorrectCount++;
-            if(gameState.endlessCorrectCount > saveData.maxEndlessScore) {
-                saveData.maxEndlessScore = gameState.endlessCorrectCount;
-                saveGame();
-            }
+            if(gameState.endlessCorrectCount > saveData.maxEndlessScore) { saveData.maxEndlessScore = gameState.endlessCorrectCount; saveGame(); }
         }
-
-        let gold = 20; 
-        if(isBoss) { gold += 50; gameState.expGained += 50; unlockAchievement('boss_killer'); }
+        let gold = 20; if(isBoss) { gold += 50; gameState.expGained += 50; unlockAchievement('boss_killer'); }
         gameState.goldGained += gold;
-
         if(q.type === 'full' || q.type === 'fill') gameState.writeCorrectCount++;
         area.classList.add('anim-correct');
         document.getElementById('score-display').innerText = `Score: ${gameState.score}`;
         checkInGameAchievements();
-        setTimeout(() => {
-            area.classList.remove('anim-correct');
-            gameState.qIndex++;
-            showQuestion();
-        }, 500);
+        setTimeout(() => { area.classList.remove('anim-correct'); gameState.qIndex++; showQuestion(); }, 500);
     } else {
         if(gameState.shieldActive) {
-            gameState.shieldActive = false;
-            document.getElementById('shield-overlay').classList.add('hidden');
-            alert("🛡️ Shield blocked the damage!");
-            gameState.combo = 0;
-            area.classList.add('anim-wrong');
-            setTimeout(() => {
-                area.classList.remove('anim-wrong');
-                showExplanation(q);
-            }, 500);
+            gameState.shieldActive = false; document.getElementById('shield-overlay').classList.add('hidden');
+            alert("🛡️ Shield blocked the damage!"); gameState.combo = 0; area.classList.add('anim-wrong');
+            setTimeout(() => { area.classList.remove('anim-wrong'); showExplanation(q); }, 500);
         } else {
-            let dmg = isBoss ? 2 : 1;
-            gameState.hp -= dmg;
-            updateHpBar();
-            gameState.combo = 0;
-            gameState.mistakes.push(q);
-            area.classList.add('anim-wrong');
-            
-            if(gameState.hp <= 0) {
-                setTimeout(() => finishGame(false), 500);
-            } else {
-                setTimeout(() => {
-                    area.classList.remove('anim-wrong');
-                    showExplanation(q);
-                }, 500);
-            }
+            let dmg = isBoss ? 2 : 1; gameState.hp -= dmg; updateHpBar();
+            gameState.combo = 0; gameState.mistakes.push(q); area.classList.add('anim-wrong');
+            if(gameState.hp <= 0) { setTimeout(() => finishGame(false), 500); }
+            else { setTimeout(() => { area.classList.remove('anim-wrong'); showExplanation(q); }, 500); }
         }
     }
 }
 
 function renderSortUI(q) {
-    const area = document.getElementById('sort-answer-area');
-    const opts = document.getElementById('sort-options-area');
+    const area = document.getElementById('sort-answer-area'); const opts = document.getElementById('sort-options-area');
     area.innerHTML = ''; opts.innerHTML = '';
-    gameState.sortAns.forEach(w => {
-        const sp = document.createElement('span');
-        sp.className = 'sort-word';
-        sp.innerText = w;
-        area.appendChild(sp);
-    });
+    gameState.sortAns.forEach(w => { const sp = document.createElement('span'); sp.className = 'sort-word'; sp.innerText = w; area.appendChild(sp); });
     let remaining = [...q.o];
-    gameState.sortAns.forEach(w => {
-        const idx = remaining.indexOf(w);
-        if(idx > -1) remaining.splice(idx, 1);
-    });
+    gameState.sortAns.forEach(w => { const idx = remaining.indexOf(w); if(idx > -1) remaining.splice(idx, 1); });
     gameState.shuffledSortOptions.forEach(w => {
         if(remaining.includes(w)) {
-            const btn = document.createElement('button');
-            btn.className = 'btn-small';
-            btn.innerText = w;
+            const btn = document.createElement('button'); btn.className = 'btn-small'; btn.innerText = w;
             btn.onclick = () => {
-                gameState.sortAns.push(w);
-                renderSortUI(q);
+                gameState.sortAns.push(w); renderSortUI(q);
                 if(gameState.sortAns.length === q.o.length) checkAnswer(gameState.sortAns.join(' ') === q.a, q);
             };
             opts.appendChild(btn);
-            const idx = remaining.indexOf(w);
-            if(idx > -1) remaining.splice(idx, 1);
+            const idx = remaining.indexOf(w); if(idx > -1) remaining.splice(idx, 1);
         }
     });
 }
-function resetSort() { 
-    gameState.sortAns = []; 
-    gameState.shuffledSortOptions = shuffleArray([...gameState.queue[gameState.qIndex].o]);
-    renderSortUI(gameState.queue[gameState.qIndex]); 
-}
+function resetSort() { gameState.sortAns = []; gameState.shuffledSortOptions = shuffleArray([...gameState.queue[gameState.qIndex].o]); renderSortUI(gameState.queue[gameState.qIndex]); }
 function checkWritingAnswer() {
     const val = document.getElementById('writing-input').value.trim();
     const q = gameState.queue[gameState.qIndex];
-    const normUser = normalizeText(val);
-    const normAns = normalizeText(q.a);
-    checkAnswer(normUser === normAns, q);
+    checkAnswer(normalizeText(val) === normalizeText(q.a), q);
 }
 function updateHpBar() {
     const pct = Math.max(0, (gameState.hp / gameState.maxHp) * 100);
@@ -885,78 +777,41 @@ function showExplanation(q) {
     document.getElementById('expl-text').innerText = q.expl || "No explanation.";
     m.classList.remove('hidden');
 }
-function closeExplanation() {
-    document.getElementById('explanation-modal').classList.add('hidden');
-    gameState.qIndex++;
-    showQuestion();
-}
+function closeExplanation() { document.getElementById('explanation-modal').classList.add('hidden'); gameState.qIndex++; showQuestion(); }
 function showEndlessModal() { document.getElementById('endless-modal').classList.remove('hidden'); }
-
-// --- エンドレス継続処理 ---
-function continueEndless() {
-    document.getElementById('endless-modal').classList.add('hidden');
-    gameState.hp = gameState.maxHp; // 体力全回復
-    updateHpBar();
-    addEndlessQuestions();
-    showQuestion();
-}
+function continueEndless() { document.getElementById('endless-modal').classList.add('hidden'); gameState.hp = gameState.maxHp; updateHpBar(); addEndlessQuestions(); showQuestion(); }
 
 function finishGame(isClear) {
     document.getElementById('endless-modal').classList.add('hidden');
-
     showScreen('screen-result');
-    const title = document.getElementById('result-title');
-    const badge = document.getElementById('rank-badge');
-    const msg = document.getElementById('levelup-msg');
+    const title = document.getElementById('result-title'); const badge = document.getElementById('rank-badge'); const msg = document.getElementById('levelup-msg');
     msg.classList.add('hidden');
 
     if(!isClear) {
-        title.innerText = "GAME OVER";
-        title.style.color = "#d63031";
-        badge.innerText = "F";
-        badge.className = "rank-F";
-        unlockAchievement('rank_f');
+        title.innerText = "GAME OVER"; title.style.color = "#d63031"; badge.innerText = "F"; badge.className = "rank-F"; unlockAchievement('rank_f');
     } else {
-        title.innerText = "QUEST CLEAR!";
-        title.style.color = "#2d3436";
+        title.innerText = "QUEST CLEAR!"; title.style.color = "#2d3436";
         const rate = (gameState.queue.length - gameState.mistakes.length) / gameState.queue.length; 
-        let rank = 'C';
-        if(rate >= 1.0) rank = 'S';
-        else if(rate >= 0.8) rank = 'A';
-        else if(rate >= 0.6) rank = 'B';
-        badge.innerText = rank;
-        badge.className = `rank-${rank}`;
-        
-        saveData.totalSolved += (gameState.qIndex - gameState.mistakes.length);
-        saveData.writeCount += gameState.writeCorrectCount;
-
+        let rank = 'C'; if(rate >= 1.0) rank = 'S'; else if(rate >= 0.8) rank = 'A'; else if(rate >= 0.6) rank = 'B';
+        badge.innerText = rank; badge.className = `rank-${rank}`;
+        saveData.totalSolved += (gameState.qIndex - gameState.mistakes.length); saveData.writeCount += gameState.writeCorrectCount;
         if(gameState.mode === 'stage' && rank !== 'C') {
             if(!saveData.cleared.includes(gameState.stageId)) {
-                saveData.cleared.push(gameState.stageId);
-                unlockAchievement(`c${gameState.stageId}`);
-                gameState.goldGained += 500; 
+                saveData.cleared.push(gameState.stageId); unlockAchievement(`c${gameState.stageId}`); gameState.goldGained += 500; 
             }
         }
-        
         if(rank === 'S') { unlockAchievement('rank_s'); gameState.goldGained += 300; }
         if(gameState.mistakes.length === 0) unlockAchievement('no_miss');
         if(gameState.hp === gameState.maxHp) unlockAchievement('full_hp');
         if(gameState.hp === 1) unlockAchievement('survivor');
-
-        if(gameState.coinActive) {
-            gameState.goldGained *= 2;
-        }
+        if(gameState.coinActive) { gameState.goldGained *= 2; }
     }
 
     saveData.gold += gameState.goldGained;
     document.getElementById('result-gold').innerText = `+${gameState.goldGained} G` + (gameState.coinActive && isClear ? " (x2)" : "");
     if(saveData.gold >= 1000) unlockAchievement('rich');
 
-    processExp();
-    checkGlobalAchievements();
-    saveGame();
-    updateStageList();
-    updateTitleStats();
+    processExp(); checkGlobalAchievements(); saveGame(); updateStageList(); updateTitleStats();
 }
 
 function checkInGameAchievements() {
@@ -991,17 +846,12 @@ function unlockAchievement(id) {
     }
 }
 function processExp() {
-    const gained = gameState.expGained;
-    saveData.exp += gained;
+    const gained = gameState.expGained; saveData.exp += gained;
     document.getElementById('result-exp').innerText = `+${gained} EXP`;
     let leveledUp = false;
     while(true) {
         const need = getNextLevelExp(saveData.level);
-        if(saveData.exp >= need) {
-            saveData.exp -= need;
-            saveData.level++;
-            leveledUp = true;
-        } else { break; }
+        if(saveData.exp >= need) { saveData.exp -= need; saveData.level++; leveledUp = true; } else { break; }
     }
     const nextNeed = getNextLevelExp(saveData.level);
     const pct = (saveData.exp / nextNeed) * 100;
@@ -1011,17 +861,14 @@ function processExp() {
 function saveGame() { localStorage.setItem(SAVE_KEY, JSON.stringify(saveData)); }
 function showAchievements() {
     showScreen('screen-achievements');
-    const list = document.getElementById('achievement-list');
-    list.innerHTML = '';
+    const list = document.getElementById('achievement-list'); list.innerHTML = '';
     const stats = document.getElementById('achievement-stats');
     const unlocked = saveData.achieved.length;
     stats.innerText = `獲得数: ${unlocked} / ${ACHIEVEMENTS.length}`;
     ACHIEVEMENTS.forEach(a => {
         const u = saveData.achieved.includes(a.id);
-        const div = document.createElement('div');
-        div.className = `achievement-card ${u?'unlocked':''}`;
-        const name = a.name;
-        const desc = (a.hidden && !u) ? "???" : a.desc;
+        const div = document.createElement('div'); div.className = `achievement-card ${u?'unlocked':''}`;
+        const name = a.name; const desc = (a.hidden && !u) ? "???" : a.desc;
         div.innerHTML = `<div class="achieve-icon">${u?a.icon:'🔒'}</div><div><div style="font-weight:bold">${name}</div><div style="font-size:0.8rem; color:#636e72">${desc}</div></div>`;
         list.appendChild(div);
     });
@@ -1031,30 +878,15 @@ function retryGame() { if(gameState.mode==='stage') startStage(gameState.stageId
 function nextStage() { startStage(gameState.stageId + 1); }
 function toggleDebugMenu() { document.getElementById('debug-menu').classList.toggle('hidden'); }
 function debugUnlockAll() { 
-    saveData.cleared=[1,2,3,4,5,6,7,8,9,10,11,12]; 
-    saveData.level = 20; saveData.gold+=10000;
-    saveGame(); updateStageList(); updateTitleStats(); 
-    alert("全開放しました！"); 
+    saveData.cleared=[1,2,3,4,5,6,7,8,9,10,11,12]; saveData.level = 20; saveData.gold+=10000;
+    saveGame(); updateStageList(); updateTitleStats(); alert("全開放しました！"); 
 }
 function debugReset() { 
     if(confirm("【重要】全てのデータを消去して初期化しますか？")) { 
         localStorage.clear();
-        saveData = {
-            cleared: [], achieved: [], level: 1, exp: 0, gold: 0,
-            items: { potion: 0, bomb: 0, hint: 0, pencil: 0, shield: 0, coin: 0 },
-            totalSolved: 0, writeCount: 0
-        };
+        saveData = { cleared: [], achieved: [], level: 1, exp: 0, gold: 0, items: { potion: 0, bomb: 0, hint: 0, pencil: 0, shield: 0, coin: 0 }, totalSolved: 0, writeCount: 0 };
         saveGame();
-        
-        gameState = {
-            mode: '', stageId: 1, queue: [], qIndex: 0, score: 0, combo: 0, mistakes: [],
-            hp: 5, maxHp: 5, expGained: 0, goldGained: 0, endlessWave: 0, // 3 -> 5
-            writeCorrectCount: 0, shieldActive: false, pencilUsed: false, coinActive: false, debugClicks: 0
-        };
-        
-        showScreen('screen-title');
-        updateStageList();
-        updateTitleStats();
-        alert("データを初期化しました。");
+        gameState = { mode: '', stageId: 1, queue: [], qIndex: 0, score: 0, combo: 0, mistakes: [], hp: 5, maxHp: 5, expGained: 0, goldGained: 0, endlessWave: 0, writeCorrectCount: 0, shieldActive: false, pencilUsed: false, coinActive: false, debugClicks: 0 };
+        showScreen('screen-title'); updateStageList(); updateTitleStats(); alert("データを初期化しました。");
     } 
 }
