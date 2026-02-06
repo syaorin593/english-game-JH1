@@ -3,11 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>English Quest</title>
+    <title>English Quest: JHS 2nd Grade</title>
     <link rel="stylesheet" href="style.css">
+    <meta property="og:title" content="English Quest: JHS 2nd Grade">
+    <meta property="og:description" content="中学2年生レベルの英語RPG。未来形、助動詞、不定詞などを攻略せよ！">
+    <meta property="og:type" content="game">
 </head>
 <body>
     <div id="app">
+        <div id="version-display" style="position:absolute; bottom:5px; right:10px; font-size:0.7rem; color:#888; z-index:9999;">ver 5.0 (Random Fix)</div>
+
         <div id="explanation-modal" class="modal-overlay hidden">
             <div class="modal-content explanation-box">
                 <h3 class="text-danger">❌ Incorrect...</h3>
@@ -24,11 +29,11 @@
 
         <div id="endless-modal" class="modal-overlay hidden">
             <div class="modal-content">
-                <h3>Wave Clear!</h3>
-                <p>HPが回復しました。挑戦を続けますか？</p>
+                <h3>Check Point</h3>
+                <p>10問クリア！HPが全回復しました。<br>さらに記録を伸ばしますか？</p>
                 <div class="modal-buttons">
-                    <button onclick="continueEndless()" class="btn-primary">次へ (+Bonus)</button>
-                    <button onclick="finishGame(true)" class="btn-warning">帰還する</button>
+                    <button onclick="continueEndless()" class="btn-primary">続ける (+Bonus)</button>
+                    <button onclick="finishGame(true)" class="btn-warning">記録して帰還</button>
                 </div>
             </div>
         </div>
@@ -99,7 +104,7 @@
                     <div class="item-icon">🪙</div>
                     <div class="item-info">
                         <div class="item-name">Lucky Coin</div>
-                        <div class="item-desc">獲得ゴールド2倍(1St)</div>
+                        <div class="item-desc">クリア時獲得ゴールド2倍</div>
                         <div class="item-price">400 G</div>
                     </div>
                     <button onclick="buyItem('coin', 400)" class="btn-buy">購入</button>
@@ -118,7 +123,9 @@
 
         <section id="screen-title" class="screen">
             <h1 id="game-title">ENGLISH QUEST</h1>
-            <p class="subtitle">中学英語 完全攻略RPG</p>
+            <p class="subtitle">中学2年 英語完全攻略RPG</p>
+            
+            <p id="endless-record-display" class="hidden" style="color:#0984e3; font-weight:bold; margin-top:-10px;">Endless Best: 0 問</p>
             
             <div class="player-status-card">
                 <div class="level-badge">Lv.<span id="title-level">1</span></div>
@@ -140,7 +147,6 @@
                 <button class="back-btn" onclick="showScreen('screen-title')">◀ タイトル</button>
                 <h2>Select Stage</h2>
             </div>
-            
             <button onclick="showShop()" class="btn-shop">🛒 アイテムショップ (Gold: <span id="stage-gold">0</span>)</button>
             <div id="stage-list" class="grid-container"></div>
         </section>
@@ -148,7 +154,7 @@
         <section id="screen-game" class="screen hidden">
             <div id="boss-overlay" class="hidden">WARNING: BOSS BATTLE</div>
             <div id="shield-overlay" class="hidden">🛡️ SHIELD</div>
-            <div id="coin-overlay" class="hidden">🪙 x2 GOLD</div>
+            <div id="coin-overlay" class="hidden">🪙 x2 BONUS</div>
 
             <div class="game-header">
                 <button onclick="confirmQuit()" class="back-btn-mini">◀</button>
@@ -167,11 +173,8 @@
                 <div id="q-category">Theme</div>
                 <div id="q-type-badge">TYPE</div>
                 <p id="q-text">Loading...</p>
-                
                 <div id="writing-status" class="hidden"></div>
-
                 <div id="choices-container" class="hidden"></div>
-                
                 <div id="sort-container" class="hidden">
                     <div id="sort-answer-area"></div>
                     <div id="sort-options-area"></div>
@@ -179,7 +182,6 @@
                         <button onclick="resetSort()" class="btn-small">リセット</button>
                     </div>
                 </div>
-
                 <div id="writing-container" class="hidden">
                     <p id="writing-hint" class="hint-text"></p>
                     <input type="text" id="writing-input" autocomplete="off" placeholder="答えを入力">
@@ -201,7 +203,6 @@
             <h2 id="result-title">RESULT</h2>
             <div id="rank-badge"></div>
             <div id="result-stats"></div>
-            
             <div class="exp-result-box">
                 <div>獲得経験値: <span id="result-exp" class="bold text-success">+0 EXP</span></div>
                 <div>獲得ゴールド: <span id="result-gold" class="bold text-gold">+0 G</span></div>
@@ -210,7 +211,6 @@
                 </div>
                 <div id="levelup-msg" class="hidden">🆙 LEVEL UP!</div>
             </div>
-
             <div class="menu-list">
                 <button onclick="retryGame()">もう一度挑戦</button>
                 <button onclick="showScreen('screen-title')">タイトルへ</button>
@@ -227,8 +227,6 @@
             <div id="achievement-list"></div>
         </section>
     </div>
-    
-    <script src="game.js"></script>
+    <script src="script.js"></script>
 </body>
 </html>
-
